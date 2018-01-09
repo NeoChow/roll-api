@@ -13,13 +13,16 @@ Examples:
 
 ```bash
 # Roll a single d20
-curl -H "Content-Type: application/json" https://roll.poweredvtt.com/1d20
+curl -H "Content-Type: application/json" https://roll.poweredvtt.com/v1/1d20
 
 # Reroll anything below a 2
-curl -H "Content-Type: application/json" https://roll.poweredvtt.com/4d8rr2
+curl -H "Content-Type: application/json" https://roll.poweredvtt.com/v1/4d8rr2
 
 # Set min/min of a die
-curl -H "Content-Type: application/json" https://roll.poweredvtt.com/1d100min2max99
+curl -H "Content-Type: application/json" https://roll.poweredvtt.com/v1/1d100min2max99
+
+# Add a comment
+curl -H "Content-Type: application/json" 'https://roll.poweredvtt.com/v1/1d20 "Rolling for gold!"'
 ```
 
 ## Roll Your Own

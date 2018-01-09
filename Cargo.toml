@@ -8,7 +8,7 @@ chrono = { version = "0.4.0", features = [ "serde" ] }
 rand = "0.3"
 rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "v0.3" }
 rocket_codegen = { git = "https://github.com/SergioBenitez/Rocket", branch = "v0.3" }
-ttml = { git = "https://github.com/UnicornHeartClub/tabletop-macro-language", branch = "refactor" }
+ttml = { git = "https://github.com/UnicornHeartClub/tabletop-macro-language" }
 serde = "1.0.16"
 serde_derive = "1.0.16"
 serde_json = "1.0.4"

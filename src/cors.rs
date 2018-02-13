@@ -1,21 +1,25 @@
 use rocket::{Request, Response};
+use rocket::State;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::{Header, ContentType, Method};
 use std::io::Cursor;
+
+use config::Config;
 
 pub struct CORS;
 
 impl Fairing for CORS {
     fn info(&self) -> Info {
         Info {
-            name: "Add CORS headers to requests",
+            name: "CORS Middleware",
             kind: Kind::Response
         }
     }
 
     fn on_response(&self, request: &Request, response: &mut Response) {
         if request.method() == Method::Options || response.content_type() == Some(ContentType::JSON) {
-            response.set_header(Header::new("Access-Control-Allow-Origin", "http://localhost:3000"));
+            let config = request.guard::<State<Config>>().unwrap();
+            response.set_header(Header::new("Access-Control-Allow-Origin", config.access_control_allow_origin.clone()));
             response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, OPTIONS"));
             response.set_header(Header::new("Access-Control-Allow-Headers", "Content-Type"));
             response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));

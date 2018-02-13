@@ -12,6 +12,7 @@ extern crate ttml;
 extern crate uuid;
 
 pub mod die;
+pub mod config;
 pub mod cors;
 pub mod roll;
 pub mod v1;
@@ -19,6 +20,7 @@ pub mod v1;
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/v1", routes![v1::roll])
+        .attach(config::ConfigMiddleware)
         .attach(cors::CORS)
 }
 

@@ -47,21 +47,6 @@ fn get_die_max(die: &DieType) -> i16 {
     }
 }
 
-/// Determine the number of sides based on the die type
-fn get_die_sides(die: &DieType) -> u8 {
-    match die {
-        &DieType::D4 => 4,
-        &DieType::D6 => 6,
-        &DieType::D8 => 8,
-        &DieType::D10 => 10,
-        &DieType::D12 => 12,
-        &DieType::D20 => 20,
-        &DieType::D100 => 100,
-        &DieType::Fate => 3,
-        &DieType::Other => 0,
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Die {
     /// Unique identifier of the die
@@ -88,8 +73,8 @@ pub struct Die {
     /// Minimum number to roll
     pub min: i16,
 
-    /// The number of faces the die has
-    pub sides: u8,
+    /// Custom sides
+    pub sides: Option<Vec<i16>>,
 
     /// Timestamp of the roll
     pub timestamp: DateTime<Utc>,
@@ -109,7 +94,7 @@ impl Die {
             is_successful: false,
             max: get_die_max(&die),
             min: get_die_min(&die),
-            sides: get_die_sides(&die),
+            sides: None,
             timestamp: Utc::now(),
             value: 0,
         }
@@ -134,24 +119,90 @@ impl Die {
     /// Roll the die, generating a random number and calculating any modifiers
     pub fn roll(&mut self) -> &Die {
         // generate a random number
-        let between = Range::new(self.min, self.max + 1);
-        let mut rng = rand::thread_rng();
-        let roll = between.ind_sample(&mut rng);
-        self.value = roll;
-        self.is_successful = true;
+        match &self.sides {
+            &Some(ref sides) => {
+                let between = Range::new(0, sides.len());
+                let mut rng = rand::thread_rng();
+                let idx = between.ind_sample(&mut rng);
+                let roll = sides[idx];
+                self.value = roll;
+                self.is_successful = true;
+            },
+            &None => {
+                let between = Range::new(self.min, self.max);
+                let mut rng = rand::thread_rng();
+                let roll = between.ind_sample(&mut rng);
+                self.value = roll;
+                self.is_successful = true;
+            }
+        }
         self
     }
 
-    pub fn set_sides(&mut self, sides: u8) {
-        self.sides = sides
-    }
-
     pub fn set_min(&mut self, min: i16) {
-        self.min = min
+        self.min = min;
     }
 
     pub fn set_max(&mut self, max: i16) {
-        self.max = max
+        self.max = max;
     }
+}
 
+#[test]
+fn it_can_create_dice() {
+    // Create some random dice
+    let d20 = Die::new(DieType::D20);
+    assert_eq!(d20.die, DieType::D20);
+    assert_eq!(d20.min, 1);
+    assert_eq!(d20.max, 20);
+
+    let d4 = Die::new(DieType::D4);
+    assert_eq!(d4.die, DieType::D4);
+    assert_eq!(d4.min, 1);
+    assert_eq!(d4.max, 4);
+
+    let fate = Die::new(DieType::Fate);
+    assert_eq!(fate.die, DieType::Fate);
+    assert_eq!(fate.min, -1);
+    assert_eq!(fate.max, 1);
+}
+
+#[test]
+fn it_can_set_die_min() {
+    let mut custom = Die::new(DieType::Other);
+    custom.set_min(-5);
+    assert_eq!(custom.die, DieType::Other);
+    assert_eq!(custom.min, -5);
+}
+
+#[test]
+fn it_can_set_die_max() {
+    let mut custom = Die::new(DieType::Other);
+    custom.set_max(-50);
+    assert_eq!(custom.die, DieType::Other);
+    assert_eq!(custom.max, -50);
+}
+
+#[test]
+fn it_can_roll_die() {
+    let mut die = Die::new(DieType::D20);
+    die.roll();
+    assert!(die.value >= 1);
+    assert!(die.value <= 20);
+
+    let mut custom = Die::new(DieType::Other);
+    custom.set_max(-5);
+    custom.set_min(-8);
+    custom.roll();
+    assert!(custom.value >= -8);
+    assert!(custom.value <= -5);
+}
+
+#[test]
+fn it_can_roll_custom_sides() {
+    let mut die = Die::new(DieType::Other);
+    die.sides = Some(vec![2, 4, 6, 8, 10]);
+    die.roll();
+    assert_ne!(die.value, 0);
+    assert_eq!(die.value % 2, 0);
 }

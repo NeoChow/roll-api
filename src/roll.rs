@@ -5,17 +5,13 @@ use die::DieType;
 use uuid::Uuid;
 
 // Rolls all the arguments into a single struct
-pub struct ComposedRoll {
-    pub advantage: bool,
-    pub comment: Option<String>,
-    pub d: i16,
+pub struct RollFlags {
     pub die: DieType,
-    pub disadvantage: bool,
-    pub e: i16,
+    pub equation: String,
     pub gt: u16,
     pub gte: u16,
-    pub h: i16,
-    pub l: i16,
+    pub kh: i16,
+    pub kl: i16,
     pub lt: u16,
     pub lte: u16,
     pub max: i16,
@@ -24,6 +20,29 @@ pub struct ComposedRoll {
     pub n: i16,
     pub ro: i16,
     pub rr: i16,
+    pub sides: Option<Vec<i16>>,
+}
+
+impl RollFlags {
+    pub fn new() -> RollFlags {
+        RollFlags {
+            die: DieType::Other,
+            equation: "".to_string(),
+            gt: 0,
+            gte: 0,
+            kh: 0,
+            kl: 0,
+            lt: 0,
+            lte: 0,
+            max: 0,
+            min: 1,
+            modifiers: vec![],
+            n: 0,
+            ro: 0,
+            rr: 0,
+            sides: None,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -31,17 +50,11 @@ pub struct Roll {
     /// Unique identifier for the roll
     pub id: String,
 
-    /// Roll comment
-    pub comment: Option<String>,
-
     /// The dice that compose this roll
     pub dice: Vec<Die>,
 
     /// Calculated equation of the roll
     pub equation: String,
-
-    /// Time to execute final output
-    pub execution_time: u64,
 
     /// Modifiers to apply to the combined value
     pub modifiers: Vec<i16>,
@@ -57,8 +70,20 @@ pub struct Roll {
 }
 
 impl Roll {
-    pub fn new(mut dice: Vec<Die>) -> Roll {
-        let timestamp = Utc::now();
+    pub fn new(flags: RollFlags) -> Roll {
+        let mut dice = vec![];
+        for _ in 0..flags.n {
+            let mut die = Die::new(flags.die);
+            die.set_min(flags.min);
+            die.set_max(flags.max);
+
+            match flags.sides {
+                Some(ref sides) => { die.sides = Some(sides.clone()); }
+                None => {}
+            };
+
+            dice.push(die);
+        }
 
         // Roll each dice
         for die in &mut dice {
@@ -67,27 +92,47 @@ impl Roll {
 
         let value = dice.iter().fold(0, |sum, d| sum + d.value as i32);
 
-        Roll {
-            comment: None,
+        let mut roll = Roll {
             dice,
-            equation: "".to_string(), // @refactor ideally we should be setting this on new
-            timestamp,
-            execution_time: 0,
+            equation: flags.equation,
+            timestamp: Utc::now(),
             id: Uuid::new_v4().to_string(),
             modifiers: Vec::new(),
             raw_value: value,
             value,
+        };
+
+        if flags.modifiers.len() > 0 {
+            for i in flags.modifiers.into_iter() {
+                roll.apply_modifier(i);
+            }
         }
-    }
 
-    /// Associate this roll with a comment
-    pub fn add_comment(&mut self, comment: String) {
-        self.comment = Some(comment)
-    }
+        if flags.rr > 0 {
+            roll.reroll_dice_forever_above(flags.rr);
+        } else if flags.rr < 0 {
+            roll.reroll_dice_forever_below(flags.rr);
+        } else if flags.ro > 0 {
+            roll.reroll_dice_once_above(flags.ro);
+        } else if flags.ro < 0 {
+            roll.reroll_dice_once_below(flags.ro);
+        }
 
-    /// Associate this roll with a comment
-    pub fn add_equation(&mut self, equation: String) {
-        self.equation = equation
+        if flags.gt != 0 {
+            roll.keep_greater_than(flags.gt);
+        } else if flags.gte != 0 {
+            roll.keep_greater_than_or_equal_to(flags.gte);
+        } else if flags.lt != 0 {
+            roll.keep_less_than(flags.lt);
+        } else if flags.lte != 0 {
+            roll.keep_less_than_or_equal_to(flags.lte);
+        } else if flags.kh != 0 {
+            roll.keep_high(flags.kh as u16);
+        } else if flags.kl != 0 {
+            roll.keep_low(flags.kl as u16);
+        }
+
+        roll
     }
 
     /// Add a modifier to the roll

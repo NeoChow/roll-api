@@ -1,5 +1,5 @@
-#![plugin(rocket_codegen)]
 #![feature(plugin)]
+#![plugin(rocket_codegen)]
 
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate serde_json;
@@ -12,12 +12,14 @@ extern crate ttml;
 extern crate uuid;
 
 pub mod die;
+pub mod cors;
 pub mod roll;
 pub mod v1;
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount("/v1", routes![v1::roll])
+        .attach(cors::CORS)
 }
 
 fn main() {

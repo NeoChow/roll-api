@@ -3,6 +3,7 @@ use chrono::prelude::Utc;
 use die::Die;
 use die::DieType;
 use uuid::Uuid;
+use ttml::arg::ComparisonArg;
 
 // Rolls all the arguments into a single struct
 pub struct RollFlags {
@@ -20,6 +21,7 @@ pub struct RollFlags {
     pub n: i16,
     pub ro: i16,
     pub rr: i16,
+    pub rr_op: Option<ComparisonArg>,
     pub sides: Option<Vec<i16>>,
 }
 
@@ -40,6 +42,7 @@ impl RollFlags {
             n: 0,
             ro: 0,
             rr: 0,
+            rr_op: None,
             sides: None,
         }
     }
@@ -85,12 +88,11 @@ impl Roll {
             dice.push(die);
         }
 
+
         // Roll each dice
         for die in &mut dice {
             die.roll();
         }
-
-        let value = dice.iter().fold(0, |sum, d| sum + d.value as i32);
 
         let mut roll = Roll {
             dice,
@@ -98,26 +100,19 @@ impl Roll {
             timestamp: Utc::now(),
             id: Uuid::new_v4().to_string(),
             modifiers: Vec::new(),
-            raw_value: value,
-            value,
+            raw_value: 0,
+            value: 0,
         };
 
-        if flags.modifiers.len() > 0 {
-            for i in flags.modifiers.into_iter() {
-                roll.apply_modifier(i);
-            }
-        }
+        // If we have a reroll flag, execute it
+        match flags.rr_op {
+            Some(op) => {
+                roll.reroll_dice_forever(op, flags.rr);
+            },
+            None => {} // do nothing
+        };
 
-        if flags.rr > 0 {
-            roll.reroll_dice_forever_above(flags.rr);
-        } else if flags.rr < 0 {
-            roll.reroll_dice_forever_below(flags.rr);
-        } else if flags.ro > 0 {
-            roll.reroll_dice_once_above(flags.ro);
-        } else if flags.ro < 0 {
-            roll.reroll_dice_once_below(flags.ro);
-        }
-
+        // Keep or drop dice that fit certain criteria
         if flags.gt != 0 {
             roll.keep_greater_than(flags.gt);
         } else if flags.gte != 0 {
@@ -132,13 +127,20 @@ impl Roll {
             roll.keep_low(flags.kl as u16);
         }
 
-        roll
-    }
+        // Once everything has been rerolled, dropped, etc, count the total
+        let raw_value = roll.dice.iter().filter(|d| !d.is_dropped).fold(0, |sum, d| sum + d.value as i32);
+        roll.raw_value = raw_value;
+        roll.value = raw_value;
 
-    /// Add a modifier to the roll
-    pub fn apply_modifier(&mut self, modifier: i16) {
-        self.modifiers.push(modifier);
-        self.value += modifier as i32;
+        // Apply and add our modifiers
+        if flags.modifiers.len() > 0 {
+            for modifier in flags.modifiers.into_iter() {
+                roll.modifiers.push(modifier);
+                roll.value += modifier as i32;
+            }
+        }
+
+        roll
     }
 
     /// Keep the dice greater than a number
@@ -146,7 +148,6 @@ impl Roll {
         for die in &mut self.dice {
             if (die.value as u16) <= keep {
                 die.drop();
-                self.value -= die.value as i32;
             } else {
                 die.success();
             }
@@ -158,7 +159,6 @@ impl Roll {
         for die in &mut self.dice {
             if (die.value as u16) < keep {
                 die.drop();
-                self.value -= die.value as i32;
             } else {
                 die.success();
             }
@@ -170,7 +170,6 @@ impl Roll {
         for die in &mut self.dice {
             if (die.value as u16) >= keep {
                 die.drop();
-                self.value -= die.value as i32;
             } else {
                 die.success();
             }
@@ -182,7 +181,6 @@ impl Roll {
         for die in &mut self.dice {
             if (die.value as u16) > keep {
                 die.drop();
-                self.value -= die.value as i32;
             } else {
                 die.success();
             }
@@ -197,7 +195,6 @@ impl Roll {
         for die in &mut self.dice {
             if count >= keep {
                 die.drop();
-                self.value -= die.value as i32;
             }
             count += 1;
         }
@@ -213,7 +210,6 @@ impl Roll {
         for die in &mut self.dice {
             if count >= keep {
                 die.drop();
-                self.value -= die.value as i32;
             }
             count += 1;
         }
@@ -222,34 +218,23 @@ impl Roll {
     }
 
     /// Reroll dice one time that are above a certain threshold
-    pub fn reroll_dice_once_above(&mut self, threshold: i16) {
+    pub fn reroll_dice_once(&mut self, op: &ComparisonArg, threshold: i16) {
         let mut new_dice = Vec::new();
         for die in &mut self.dice {
-            if !die.is_rerolled && die.value >= threshold {
+            let comparison = match op {
+                &ComparisonArg::GreaterThan => !die.is_rerolled && die.value > threshold,
+                &ComparisonArg::GreaterThanOrEqual => !die.is_rerolled && die.value >= threshold,
+                &ComparisonArg::LessThan => !die.is_rerolled && die.value < threshold,
+                &ComparisonArg::LessThanOrEqual => !die.is_rerolled && die.value <= threshold,
+                &ComparisonArg::EqualTo => !die.is_rerolled && die.value == threshold,
+            };
+
+            if comparison {
                 let mut d = Die::new(die.die);
                 d.roll();
-                let value = d.value;
-                self.value += value as i32;
                 &die.rerolled(&d);
+                &die.drop();
                 new_dice.push(d);
-            }
-        }
-
-        self.dice.append(&mut new_dice);
-    }
-
-    /// Reroll dice one time that are below a certain threshold
-    pub fn reroll_dice_once_below(&mut self, threshold: i16) {
-        let mut new_dice = Vec::new();
-        for die in &mut self.dice {
-            if !die.is_rerolled && die.value <= threshold {
-                let mut d = Die::new(die.die);
-                d.roll();
-                let value = d.value;
-                self.value += value as i32;
-                &die.rerolled(&d);
-                new_dice.push(d);
-
             }
         }
 
@@ -257,34 +242,26 @@ impl Roll {
     }
 
     /// Reroll dice forever that are above a certain threshold (e.g. Exploding Dice)
-    pub fn reroll_dice_forever_above(&mut self, threshold: i16) {
+    pub fn reroll_dice_forever(&mut self, op: ComparisonArg, threshold: i16) {
         // Reroll any dice that need to be rerolled
-        self.reroll_dice_once_above(threshold);
+        self.reroll_dice_once(&op, threshold);
 
         let mut has_more = false;
         for die in self.dice.iter() {
-            if !die.is_rerolled && die.value >= threshold {
+            let comparison = match op {
+                ComparisonArg::GreaterThan => !die.is_rerolled && die.value > threshold,
+                ComparisonArg::GreaterThanOrEqual => !die.is_rerolled && die.value >= threshold,
+                ComparisonArg::LessThan => !die.is_rerolled && die.value < threshold,
+                ComparisonArg::LessThanOrEqual => !die.is_rerolled && die.value <= threshold,
+                ComparisonArg::EqualTo => !die.is_rerolled && die.value == threshold,
+            };
+
+            if comparison {
                 has_more = true
             }
         }
         if has_more {
-            self.reroll_dice_forever_above(threshold);
-        }
-    }
-
-    /// Reroll dice forever that are below a certain threshold
-    pub fn reroll_dice_forever_below(&mut self, threshold: i16) {
-        // Reroll any dice that need to be rerolled
-        self.reroll_dice_once_below(threshold);
-
-        let mut has_more = false;
-        for die in self.dice.iter() {
-            if !die.is_rerolled && die.value <= threshold {
-                has_more = true
-            }
-        }
-        if has_more {
-            self.reroll_dice_forever_below(threshold);
+            self.reroll_dice_forever(op, threshold);
         }
     }
 }

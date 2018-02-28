@@ -2,7 +2,7 @@ use die::*;
 use rocket_contrib::{Json, Value};
 use roll::*;
 use std::time::Instant;
-use ttml::arg::{Arg, ArgValue, RollArg};
+use ttml::arg::{Arg, ArgValue, ComparisonArg, RollArg};
 use ttml::parser::parse_step_p;
 
 #[derive(Serialize)]
@@ -74,9 +74,33 @@ pub fn roll(command: String) -> Option<Json<RollsResponse>> {
             } else if let &Arg::Roll(RollArg::LTE(ArgValue::Number(lte))) = arg {
                 flags.lte = lte as u16;
                 flags.equation = flags.equation + &"lte" + &lte.to_string();
-            } else if let &Arg::Roll(RollArg::RR(ArgValue::Number(rr))) = arg {
-                flags.rr = rr as i16;
-                flags.equation = flags.equation + &"rr" + &rr.to_string();
+            } else if let &Arg::Roll(RollArg::RR(ref comparitive)) = arg {
+                flags.rr = match &comparitive.value {
+                    &ArgValue::Number(n) => n as i16,
+                    _ => 0
+                };
+                match comparitive.op {
+                    ComparisonArg::GreaterThan => {
+                        flags.rr_op = Some(ComparisonArg::GreaterThan);
+                        flags.equation = flags.equation + &"rr>" + &flags.rr.to_string();
+                    },
+                    ComparisonArg::GreaterThanOrEqual => {
+                        flags.rr_op = Some(ComparisonArg::GreaterThanOrEqual);
+                        flags.equation = flags.equation + &"rr>=" + &flags.rr.to_string();
+                    },
+                    ComparisonArg::LessThan => {
+                        flags.rr_op = Some(ComparisonArg::LessThan);
+                        flags.equation = flags.equation + &"rr<" + &flags.rr.to_string();
+                    },
+                    ComparisonArg::LessThanOrEqual => {
+                        flags.rr_op = Some(ComparisonArg::LessThanOrEqual);
+                        flags.equation = flags.equation + &"rr<=" + &flags.rr.to_string();
+                    },
+                    ComparisonArg::EqualTo => {
+                        flags.rr_op = Some(ComparisonArg::EqualTo);
+                        flags.equation = flags.equation + &"rr==" + &flags.rr.to_string();
+                    },
+                };
             } else if let &Arg::Roll(RollArg::RO(ArgValue::Number(ro))) = arg {
                 flags.ro = ro as i16;
                 flags.equation = flags.equation + &"ro" + &ro.to_string();

@@ -5,6 +5,7 @@ authors = ["Thomas Lackemann <tommylackemann@gmail.com>"]
 
 [dependencies]
 chrono = { version = "0.4.0", features = [ "serde" ] }
+lazy_static = "1.0"
 rand = "0.3"
 rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "v0.3" }
 rocket_codegen = { git = "https://github.com/SergioBenitez/Rocket", branch = "v0.3" }
@@ -20,3 +21,7 @@ branch = "v0.3"
 default-features = false
 features = ["json"]
 
+[dependencies.prometheus]
+git = "https://github.com/pingcap/rust-prometheus.git"
+default-features = false
+features = ["nightly"]

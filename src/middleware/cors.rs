@@ -4,11 +4,11 @@ use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::{Header, ContentType, Method};
 use std::io::Cursor;
 
-use config::Config;
+use middleware::config::Config;
 
-pub struct CORS;
+pub struct CorsMiddleware;
 
-impl Fairing for CORS {
+impl Fairing for CorsMiddleware {
     fn info(&self) -> Info {
         Info {
             name: "CORS Middleware",

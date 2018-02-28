@@ -22,5 +22,4 @@ impl Fairing for ConfigMiddleware {
             access_control_allow_origin,
         }))
     }
-
 }

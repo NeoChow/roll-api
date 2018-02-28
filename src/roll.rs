@@ -22,6 +22,7 @@ pub struct RollFlags {
     pub ro: i16,
     pub rr: i16,
     pub rr_op: Option<ComparisonArg>,
+    pub ro_op: Option<ComparisonArg>,
     pub sides: Option<Vec<i16>>,
 }
 
@@ -43,6 +44,7 @@ impl RollFlags {
             ro: 0,
             rr: 0,
             rr_op: None,
+            ro_op: None,
             sides: None,
         }
     }
@@ -104,10 +106,17 @@ impl Roll {
             value: 0,
         };
 
-        // If we have a reroll flag, execute it
+        // If we have reroll flags, execute it
         match flags.rr_op {
             Some(op) => {
-                roll.reroll_dice_forever(op, flags.rr);
+                roll.reroll_dice_forever(&op, flags.rr);
+            },
+            None => {} // do nothing
+        };
+
+        match flags.ro_op {
+            Some(op) => {
+                roll.reroll_dice_once(&op, flags.ro);
             },
             None => {} // do nothing
         };
@@ -217,7 +226,7 @@ impl Roll {
         self.dice.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
     }
 
-    /// Reroll dice one time that are above a certain threshold
+    /// Reroll dice one time that are above or below a certain threshold
     pub fn reroll_dice_once(&mut self, op: &ComparisonArg, threshold: i16) {
         let mut new_dice = Vec::new();
         for die in &mut self.dice {
@@ -241,19 +250,19 @@ impl Roll {
         self.dice.append(&mut new_dice);
     }
 
-    /// Reroll dice forever that are above a certain threshold (e.g. Exploding Dice)
-    pub fn reroll_dice_forever(&mut self, op: ComparisonArg, threshold: i16) {
+    /// Reroll dice forever that are above or below a certain threshold
+    pub fn reroll_dice_forever(&mut self, op: &ComparisonArg, threshold: i16) {
         // Reroll any dice that need to be rerolled
         self.reroll_dice_once(&op, threshold);
 
         let mut has_more = false;
         for die in self.dice.iter() {
             let comparison = match op {
-                ComparisonArg::GreaterThan => !die.is_rerolled && die.value > threshold,
-                ComparisonArg::GreaterThanOrEqual => !die.is_rerolled && die.value >= threshold,
-                ComparisonArg::LessThan => !die.is_rerolled && die.value < threshold,
-                ComparisonArg::LessThanOrEqual => !die.is_rerolled && die.value <= threshold,
-                ComparisonArg::EqualTo => !die.is_rerolled && die.value == threshold,
+                &ComparisonArg::GreaterThan => !die.is_rerolled && die.value > threshold,
+                &ComparisonArg::GreaterThanOrEqual => !die.is_rerolled && die.value >= threshold,
+                &ComparisonArg::LessThan => !die.is_rerolled && die.value < threshold,
+                &ComparisonArg::LessThanOrEqual => !die.is_rerolled && die.value <= threshold,
+                &ComparisonArg::EqualTo => !die.is_rerolled && die.value == threshold,
             };
 
             if comparison {

@@ -101,9 +101,33 @@ pub fn roll(command: String) -> Option<Json<RollsResponse>> {
                         flags.equation = flags.equation + &"rr==" + &flags.rr.to_string();
                     },
                 };
-            } else if let &Arg::Roll(RollArg::RO(ArgValue::Number(ro))) = arg {
-                flags.ro = ro as i16;
-                flags.equation = flags.equation + &"ro" + &ro.to_string();
+            } else if let &Arg::Roll(RollArg::RO(ref comparitive)) = arg {
+                flags.ro = match &comparitive.value {
+                    &ArgValue::Number(n) => n as i16,
+                    _ => 0
+                };
+                match comparitive.op {
+                    ComparisonArg::GreaterThan => {
+                        flags.ro_op = Some(ComparisonArg::GreaterThan);
+                        flags.equation = flags.equation + &"ro>" + &flags.ro.to_string();
+                    },
+                    ComparisonArg::GreaterThanOrEqual => {
+                        flags.ro_op = Some(ComparisonArg::GreaterThanOrEqual);
+                        flags.equation = flags.equation + &"ro>=" + &flags.ro.to_string();
+                    },
+                    ComparisonArg::LessThan => {
+                        flags.ro_op = Some(ComparisonArg::LessThan);
+                        flags.equation = flags.equation + &"ro<" + &flags.ro.to_string();
+                    },
+                    ComparisonArg::LessThanOrEqual => {
+                        flags.ro_op = Some(ComparisonArg::LessThanOrEqual);
+                        flags.equation = flags.equation + &"ro<=" + &flags.ro.to_string();
+                    },
+                    ComparisonArg::EqualTo => {
+                        flags.ro_op = Some(ComparisonArg::EqualTo);
+                        flags.equation = flags.equation + &"ro==" + &flags.ro.to_string();
+                    },
+                };
             } else if let &Arg::Roll(RollArg::ModifierPos(ArgValue::Number(mp))) = arg {
                 flags.modifiers.push(mp as i16);
                 flags.equation = flags.equation + &"+" + &mp.to_string();

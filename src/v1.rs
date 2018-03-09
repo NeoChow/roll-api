@@ -162,7 +162,8 @@ pub fn roll(command: String) -> Option<Json<RollsResponse>> {
                 let side_strs: Vec<String> = sides.into_iter().map(|side| (side.to_string())).collect();
                 flags.equation = flags.equation + &"[" + &side_strs.join(",") + &"]";
             } else if let &Arg::Roll(RollArg::Comment(ArgValue::Text(ref comment))) = arg {
-                flags.equation = flags.equation + &"[" + comment + &"]";
+                flags.comment = comment.to_string();
+                flags.equation = flags.equation + &"[" + &flags.comment + &"]";
             } else if let &Arg::Roll(RollArg::Primitive(_)) = arg {
                 // Execute this roll before starting the next one
                 rolls.push(Roll::new(flags));

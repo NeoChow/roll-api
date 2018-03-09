@@ -7,6 +7,7 @@ use ttml::arg::ComparisonArg;
 
 // Rolls all the arguments into a single struct
 pub struct RollFlags {
+    pub comment: String,
     pub die: DieType,
     pub equation: String,
     pub gt: u16,
@@ -29,6 +30,7 @@ pub struct RollFlags {
 impl RollFlags {
     pub fn new() -> RollFlags {
         RollFlags {
+            comment: "".to_string(),
             die: DieType::Other,
             equation: "".to_string(),
             gt: 0,
@@ -52,6 +54,9 @@ impl RollFlags {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Roll {
+    /// Comment associated with the roll
+    pub comment: String,
+
     /// Unique identifier for the roll
     pub id: String,
 
@@ -97,6 +102,7 @@ impl Roll {
         }
 
         let mut roll = Roll {
+            comment: flags.comment,
             dice,
             equation: flags.equation,
             timestamp: Utc::now(),

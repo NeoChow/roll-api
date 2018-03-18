@@ -11,7 +11,10 @@ ADD src /app/src
 WORKDIR /app
 
 # build source
-RUN cargo +nightly build
+RUN cargo +nightly build --release
+
+# expose the rust api server
+EXPOSE 1337
 
 # start the server
 CMD ["cargo", "run"]

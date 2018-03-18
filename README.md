@@ -34,13 +34,13 @@ Looking to run the API locally?
 
 The API can be built using [Rust (nightly)](https://rust-lang.org/) or [Docker](https://docker.com).
 
-Once running, access the API at `http://localhost:1337/`.
+Access the API at `http://localhost:1337/`.
 
 ### Rust
 
 ```bash
 # Build
-cargo +nightly build
+cargo +nightly build --release
 
 # Run
 cargo run
@@ -53,7 +53,7 @@ cargo run
 docker build -t astral/roll_api:latest .
 
 # Run
-docker run --name roll_api -t astral/roll_api:latest -p 1337:1337
+docker run -d -p 1337:1337 astral/roll_api:latest
 ```
 
 # License

@@ -19,9 +19,15 @@ pub mod v1;
 
 fn rocket() -> rocket::Rocket {
     rocket::ignite()
+        .mount("/", routes![index])
         .mount("/v1", routes![v1::roll])
         .attach(config::ConfigMiddleware)
         .attach(cors::CORS)
+}
+
+#[get("/")]
+fn index() -> String {
+    "ok".to_string()
 }
 
 fn main() {

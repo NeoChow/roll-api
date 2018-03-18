@@ -16,4 +16,4 @@ RUN cargo +nightly build --release
 EXPOSE 1337
 
 # start the server
-CMD ["cargo", "run"]
+CMD ["cargo", "run", "--release"]

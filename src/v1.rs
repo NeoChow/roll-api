@@ -129,11 +129,15 @@ pub fn roll(command: String) -> Option<Json<RollsResponse>> {
                     },
                 };
             } else if let &Arg::Roll(RollArg::ModifierPos(ArgValue::Number(mp))) = arg {
-                flags.modifiers.push(mp as i16);
-                flags.equation = flags.equation + &"+" + &mp.to_string();
+                if mp != 0 {
+                    flags.modifiers.push(mp as i16);
+                    flags.equation = flags.equation + &"+" + &mp.to_string();
+                }
             } else if let &Arg::Roll(RollArg::ModifierNeg(ArgValue::Number(mn))) = arg {
-                flags.modifiers.push(mn as i16 * -1);
-                flags.equation = flags.equation + &"-" + &mn.to_string();
+                if mn != 0 {
+                    flags.modifiers.push(mn as i16 * -1);
+                    flags.equation = flags.equation + &"-" + &mn.to_string();
+                }
             } else if let &Arg::Roll(RollArg::Max(ArgValue::Number(max))) = arg {
                 flags.max = max as i16;
                 flags.equation = flags.equation + &"max" + &max.to_string();
